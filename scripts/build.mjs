@@ -83,7 +83,7 @@ function renderer(page) {
   const button = (label, href, style = '') => anchor(label.replace(/^каталоге VK$/, 'Проект в VK').replace(/\s*[→↗]$/, ''), href, `action${style ? ' action--'+style : ''}`);
   const contactButtons = (message = 'Обсудить в VK', light = false) => `<div class="action-row">${button(message, company.message)}${button('Позвонить', company.phoneHref, light ? 'light' : 'outline')}</div>`;
   const nav = () => menu.map(([file,label]) => anchor(label, '/'+file, '', page.path === file ? ' aria-current="page"' : '')).join('\n');
-  const logo = () => `<a class="wordmark" href="${local('/index.html')}" aria-label="Bal House — главная"><img src="${local('/assets/logo.webp')}" width="372" height="222" alt="Bal House" decoding="async"></a>`;
+  const logo = (variant = 'black') => `<a class="wordmark" href="${local('/index.html')}" aria-label="Bal House — главная"><img src="${local('/assets/logo-'+variant+'.svg')}" width="660" height="300" alt="Bal House" decoding="async"></a>`;
   const header = `<header class="masthead"><div class="wrap masthead__row"><div class="masthead__brand">${logo()}<span>Дома для жизни<br>Балаково и область</span></div>
     <nav class="nav-wide" aria-label="Основная навигация">${nav()}</nav>
     ${anchor(company.phone, company.phoneHref, 'masthead__phone', ' aria-label="Позвонить в Bal House: +7 (927) 125-09-01"')}
@@ -91,7 +91,7 @@ function renderer(page) {
     <details class="nav-drawer" data-navigation><summary role="button" aria-label="Открыть меню" aria-controls="mobile-links"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></summary>
       <nav id="mobile-links" aria-label="Мобильная навигация">${nav()}${anchor('Позвонить в Bal House',company.phoneHref)}${anchor('Сообщество ВКонтакте',company.vk)}</nav></details>
   </div></header>`;
-  const footer = `<footer class="page-footer" data-menu-background><div class="wrap"><div class="page-footer__heading"><span>ВАШ ДОМ НАЧИНАЕТСЯ С ИДЕИ</span>${anchor('Обсудим её вместе ↗',company.message)}</div><div class="page-footer__columns"><div>${logo()}<p>Строительство загородных домов в Балаково и Саратовской области.</p></div>
+  const footer = `<footer class="page-footer" data-menu-background><div class="wrap"><div class="page-footer__heading"><span>ВАШ ДОМ НАЧИНАЕТСЯ С ИДЕИ</span>${anchor('Обсудим её вместе ↗',company.message)}</div><div class="page-footer__columns"><div>${logo('white')}<p>Строительство загородных домов в Балаково и Саратовской области.</p></div>
     <nav aria-label="Навигация внизу страницы">${nav()}</nav><address>${anchor(company.phone,company.phoneHref,'phone-link')}${anchor('Bal House во ВКонтакте',company.vk)}<p>${esc(company.address)}</p></address></div>
     <div class="page-footer__legal"><span>${esc(company.legalName)} · ИНН ${company.inn} · ОГРН ${company.ogrn}</span>${anchor('Политика обработки данных','/privacy.html')}</div></div></footer>`;
   const crumbs = () => `<nav class="trail" aria-label="Хлебные крошки"><ol>${page.crumbs.map(link => `<li>${anchor(link.label,link.href)}</li>`).join('')}<li aria-current="page">${esc(page.heading)}</li></ol></nav>`;
