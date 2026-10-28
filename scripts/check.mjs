@@ -18,17 +18,22 @@ for (const [name, html] of pages) {
   if ([...html.matchAll(/<h1\b/g)].length !== 1) errors.push(`${name}: expected one h1`);
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   if (new Set(ids).size !== ids.length) errors.push(`${name}: duplicate ids`);
-  for (const match of html.matchAll(/\b(?:href|src|srcset)="([^" ]+)"/g)) {
-    const value=match[1].replaceAll('&amp;','&');
-    if (/^(https?:|tel:|mailto:|data:)/.test(value)) continue;
-    const uri=new URL(value,'https://local.invalid/'+name);
-    const destination=decodeURIComponent(uri.pathname.slice(1)) || 'index.html';
-    try { await access(path.join(root,destination)); }
-    catch { errors.push(`${name}: missing ${destination}`); }
-    if (uri.hash && destination.endsWith('.html')) {
-      const content=pages.get(destination);
-      const id=decodeURIComponent(uri.hash.slice(1));
-      if (!content?.includes(`id="${id}"`)) errors.push(`${name}: missing fragment ${destination}#${id}`);
+  for (const match of html.matchAll(/\b(href|src|srcset)="([^"]*)"/g)) {
+    const raw = match[2].replaceAll('&amp;','&');
+    const values = match[1] === 'srcset'
+      ? raw.split(',').map(part => part.trim().split(/\s+/)[0]).filter(Boolean)
+      : [raw];
+    for (const value of values) {
+      if (/^(https?:|tel:|mailto:|data:)/.test(value)) continue;
+      const uri=new URL(value,'https://local.invalid/'+name);
+      const destination=decodeURIComponent(uri.pathname.slice(1)) || 'index.html';
+      try { await access(path.join(root,destination)); }
+      catch { errors.push(`${name}: missing ${destination}`); }
+      if (uri.hash && destination.endsWith('.html')) {
+        const content=pages.get(destination);
+        const id=decodeURIComponent(uri.hash.slice(1));
+        if (!content?.includes(`id="${id}"`)) errors.push(`${name}: missing fragment ${destination}#${id}`);
+      }
     }
   }
   if (!html.includes('assets/runtime.js') || !html.includes('assets/theme.css')) errors.push(`${name}: missing new runtime`);
@@ -58,6 +63,12 @@ for (const [name, html] of pages) {
         assert.ok(graph.some(item => item['@type'] === 'Service'));
       }
     } catch (error) { errors.push(`${name}: invalid structured data: ${error.message}`); }
+  }
+  for (const match of html.matchAll(/<source type="image\/(\w+)" srcset="([^"]*)"/g)) {
+    for (const part of match[2].split(',')) {
+      const file = part.trim().split(/\s+/)[0];
+      if (!file.toLowerCase().endsWith('.' + match[1])) errors.push(`${name}: source type=image/${match[1]} points to ${file}`);
+    }
   }
   if (/site-v5|gsap\.min/.test(html)) errors.push(`${name}: obsolete runtime reference`);
   for (const match of html.matchAll(/target="_blank"[^>]*>/g)) {

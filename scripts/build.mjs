@@ -19,6 +19,39 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp
 const availableAvif = new Set((await readdir(path.join(root, 'assets')))
   .filter(file => file.endsWith('.avif')).map(file => '/assets/' + file.replace(/\.avif$/, '.webp')));
 
+const webpWidth = async file => {
+  const data = await readFile(file);
+  if (data.toString('ascii', 0, 4) !== 'RIFF' || data.toString('ascii', 8, 12) !== 'WEBP') return 0;
+  const chunk = data.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') return data.readUIntLE(24, 3) + 1;
+  if (chunk === 'VP8 ') return data.readUInt16LE(26) & 0x3fff;
+  if (chunk === 'VP8L') return (data.readUInt32LE(21) & 0x3fff) + 1;
+  return 0;
+};
+
+const assetNames = new Set(await readdir(path.join(root, 'assets')));
+const responsiveAssets = new Map();
+for (const file of [...assetNames].filter(name => name.endsWith('.webp'))) {
+  const base = file.replace(/\.webp$/, '');
+  const candidates = [];
+  for (const suffix of ['-small', '-medium', '-large', '']) {
+    const name = base + suffix + '.webp';
+    if (!assetNames.has(name)) continue;
+    candidates.push({ src: '/assets/' + name, width: await webpWidth(path.join(root, 'assets', name)) });
+  }
+  if (candidates.length > 1) responsiveAssets.set('/assets/' + file, candidates);
+}
+
+const sizeHints = {
+  card: '(max-width: 700px) 95vw, (max-width: 1500px) 50vw, 706px',
+  hero: '(max-width: 1000px) 95vw, (max-width: 1500px) 53vw, 760px',
+  stage: '(max-width: 1000px) 95vw, 745px',
+  band: '(max-width: 1000px) 95vw, 572px',
+  thumb: '(max-width: 1000px) 18vw, 90px',
+  photo: '(max-width: 700px) 95vw, 425px',
+  full: '(max-width: 1000px) 95vw, 1216px',
+};
+
 function renderer(page) {
   const local = value => {
     if (!value.startsWith('/')) return value;
@@ -29,9 +62,20 @@ function renderer(page) {
   const anchor = (label, href, className = '', extra = '') => `<a href="${esc(local(href))}"${className ? ` class="${className}"` : ''}${/^https?:/.test(href) ? ' target="_blank" rel="noopener noreferrer"' : ''}${extra}>${esc(label)}</a>`;
   const rich = parts => parts.map(part => typeof part === 'string' ? esc(part) : anchor(part.label, part.href)).join('');
   const paragraphs = (items = [], className = '') => items.map(parts => `<p${className ? ` class="${className}"` : ''}>${rich(parts)}</p>`).join('\n');
-  const image = (asset, {className = '', eager = false, picture = true} = {}) => {
+  const image = (asset, {className = '', eager = false, picture = true, sizes: sizeHint = ''} = {}) => {
     const attrs = `src="${esc(local(asset.src))}" alt="${esc(asset.alt)}"${asset.width ? ` width="${asset.width}" height="${asset.height}"` : ''} loading="${eager ? 'eager' : 'lazy'}" decoding="async"${eager ? ' fetchpriority="high"' : ''}${className ? ` class="${className}"` : ''}`;
-    return picture && availableAvif.has(asset.src) ? `<picture><source type="image/avif" srcset="${esc(local(asset.src.replace(/\.webp$/, '.avif')))}"><img ${attrs}></picture>` : `<img ${attrs}>`;
+    const candidates = responsiveAssets.get(asset.src) || [];
+    if (candidates.length < 2) {
+      return picture && availableAvif.has(asset.src) ? `<picture><source type="image/avif" srcset="${esc(local(asset.src.replace(/\.webp$/, '.avif')))}"><img ${attrs}></picture>` : `<img ${attrs}>`;
+    }
+    const sizesAttr = sizeHint ? ` sizes="${esc(sizeHint)}"` : '';
+    const webpSrcset = `srcset="${candidates.map(candidate => `${esc(local(candidate.src))} ${candidate.width}w`).join(', ')}"${sizesAttr}`;
+    const avifCandidates = candidates.filter(candidate => availableAvif.has(candidate.src));
+    const avifSource = avifCandidates.length > 1
+      ? `<source type="image/avif" srcset="${avifCandidates.map(candidate => `${esc(local(candidate.src.replace(/\.webp$/, '.avif')))} ${candidate.width}w`).join(', ')}"${sizesAttr}>`
+      : '';
+    const img = `<img ${attrs} ${webpSrcset}>`;
+    return picture ? `<picture>${avifSource}<source type="image/webp" ${webpSrcset}>${img}</picture>` : img;
   };
   const button = (label, href, style = '') => anchor(label.replace(/^каталоге VK$/, 'Проект в VK').replace(/\s*[→↗]$/, ''), href, `action${style ? ' action--'+style : ''}`);
   const contactButtons = (message = 'Обсудить в VK', light = false) => `<div class="action-row">${button(message, company.message)}${button('Позвонить', company.phoneHref, light ? 'light' : 'outline')}</div>`;
@@ -51,25 +95,25 @@ function renderer(page) {
   const pageTitle = () => `<div class="wrap page-intro">${crumbs()}<p class="eyebrow">BAL HOUSE · ${esc({projects:'КАТАЛОГ ДОМОВ',directions:'СТРОИМ ДЛЯ ВАС',objects:'НА СТРОИТЕЛЬНОЙ ПЛОЩАДКЕ',object:'ЭТАПЫ СТРОИТЕЛЬСТВА',about:'О НАС',contacts:'БУДЕМ НА СВЯЗИ',privacy:'ДОКУМЕНТЫ'}[page.type]??'ЗАГОРОДНАЯ ЖИЗНЬ')}</p><h1>${esc(page.heading)}</h1>${paragraphs(page.lead,'muted')}${(page.sourceLinks??[]).map(a=>anchor(a.label,a.href,'text-action')).join('')}${page.type==='projects'?anchor('Сравнить проекты ↓','#compare','text-action'):''}</div>`;
   const section = (content, {id = '', pale = false, className = ''} = {}) => `<section${id ? ` id="${id}"` : ''} class="block${pale ? ' block--pale' : ''}${className ? ' '+className : ''}"><div class="wrap">${content}</div></section>`;
   const sectionTitle = (title, link, description = '') => `<div class="section-title"><div><h2>${esc(title)}</h2>${description ? `<p class="muted">${esc(description)}</p>` : ''}</div>${link ? anchor(link.label,link.href,'text-action') : ''}</div>`;
-  const cta = () => page.cta.title ? `<section class="contact-band"><div class="wrap contact-band__row"><div class="contact-band__copy"><p class="eyebrow">СЛЕДУЮЩИЙ ШАГ — ВАШ</p><h2>${esc(page.cta.title)}</h2>${paragraphs(page.cta.paragraphs)}<div class="action-row">${page.cta.links.map((a,i)=>button(a.label,a.href,i?'light':'')).join('')}</div></div><figure class="contact-band__photo">${image({src:'/assets/bl154-hero.webp',alt:'Каменный дом Bal House среди сосен'})}</figure></div></section>` : '';
+  const cta = () => page.cta.title ? `<section class="contact-band"><div class="wrap contact-band__row"><div class="contact-band__copy"><p class="eyebrow">СЛЕДУЮЩИЙ ШАГ — ВАШ</p><h2>${esc(page.cta.title)}</h2>${paragraphs(page.cta.paragraphs)}<div class="action-row">${page.cta.links.map((a,i)=>button(a.label,a.href,i?'light':'')).join('')}</div></div><figure class="contact-band__photo">${image({src:'/assets/bl154-hero.webp',alt:'Каменный дом Bal House среди сосен'},{sizes:sizeHints.band})}</figure></div></section>` : '';
   const card = (id, index = 0) => {
     const data = projects.get(id);
     return `<article class="home-card" data-house="${esc(id)}" data-category="${esc(data.kind)}" data-cost="${data.price}" data-search="${esc(data.search)}" data-order="${index}">
-      <a class="home-card__media" href="${local('/'+data.path)}" aria-label="Посмотреть проект ${esc(data.name)}">${image(data.image)}<span class="home-card__kind">${esc({stone:'Каменный дом',frame:'Каркасный дом',ready:'С отделкой'}[data.kind])}</span></a>
+      <a class="home-card__media" href="${local('/'+data.path)}" aria-label="Посмотреть проект ${esc(data.name)}">${image(data.image,{sizes:sizeHints.card})}<span class="home-card__kind">${esc({stone:'Каменный дом',frame:'Каркасный дом',ready:'С отделкой'}[data.kind])}</span></a>
       <div class="home-card__body"><h3>${anchor(data.name,'/'+data.path)}</h3><p class="home-card__summary">${esc(data.summary)}</p><ul class="home-card__specs">${data.specs.map(s=>`<li>${esc(s)}</li>`).join('')}</ul>
       <div class="home-card__price">${new Intl.NumberFormat('ru-RU').format(data.price)} ₽</div><p class="home-card__note">${esc(data.priceNote)}</p>${button(data.button,'/'+data.path)}</div></article>`;
   };
   const cards = (ids, className = '') => `<div class="house-grid${className ? ' '+className : ''}">${ids.map(card).join('\n')}</div>`;
-  const directionCards = () => `<div class="service-list">${page.directions.map(item=>`<a class="service-tile" href="${local(item.href)}"><div class="service-tile__media">${image(item.image)}${item.note?`<span>${esc(item.note)}</span>`:''}</div><div class="service-tile__copy"><h3>${esc(item.title)}</h3><p>${esc(item.summary)}</p><span class="service-tile__more">Подробнее →</span></div></a>`).join('')}</div>`;
+  const directionCards = () => `<div class="service-list">${page.directions.map(item=>`<a class="service-tile" href="${local(item.href)}"><div class="service-tile__media">${image(item.image,{sizes:sizeHints.card})}${item.note?`<span>${esc(item.note)}</span>`:''}</div><div class="service-tile__copy"><h3>${esc(item.title)}</h3><p>${esc(item.summary)}</p><span class="service-tile__more">Подробнее →</span></div></a>`).join('')}</div>`;
   const definitionTable = rows => `<table class="details-table"><tbody>${rows.map(([key,value])=>`<tr><th scope="row">${esc(key)}</th><td>${esc(value)}</td></tr>`).join('')}</tbody></table>`;
-  const photoGrid = (photos, className = '') => `<div class="photo-grid ${className}">${photos.map(photo=>`<figure><a href="${local(photo.image.src)}" target="_blank" rel="noopener noreferrer" aria-label="Открыть фото: ${esc(photo.caption)}">${image(photo.image)}</a><figcaption>${esc(photo.caption)}</figcaption></figure>`).join('')}</div>`;
+  const photoGrid = (photos, className = '') => `<div class="photo-grid ${className}">${photos.map(photo=>`<figure><a href="${local(photo.image.src)}" target="_blank" rel="noopener noreferrer" aria-label="Открыть фото: ${esc(photo.caption)}">${image(photo.image,{sizes:sizeHints.photo})}</a><figcaption>${esc(photo.caption)}</figcaption></figure>`).join('')}</div>`;
   const bulletList = values => `<ul class="question-list">${values.map(value=>`<li>${esc(value)}</li>`).join('')}</ul>`;
 
   function home() {
-    const hero = `<section class="welcome wrap"><div class="welcome__layout"><div class="welcome__content"><p class="welcome__location eyebrow">${esc(page.hero.location)}</p><h1>${esc(site.seo.homeHeading[0])}<br><span>${esc(site.seo.homeHeading[1])}</span></h1><p class="welcome__lead">${esc(page.hero.lead)}</p><div class="action-row">${button('Выбрать проект','/projects.html')}${button('Обсудить в VK',company.message,'light')}</div><p class="welcome__signature">BAL HOUSE <span>СТРОИТЕЛЬСТВО ЗАГОРОДНЫХ ДОМОВ</span></p></div><figure class="welcome__photo">${image(page.hero.image,{className:'welcome__image',eager:true})}<figcaption>${anchor('BL-154 · 125 м² ↗','/projects/bl-154.html')}</figcaption></figure></div>
+    const hero = `<section class="welcome wrap"><div class="welcome__layout"><div class="welcome__content"><p class="welcome__location eyebrow">${esc(page.hero.location)}</p><h1>${esc(site.seo.homeHeading[0])}<br><span>${esc(site.seo.homeHeading[1])}</span></h1><p class="welcome__lead">${esc(page.hero.lead)}</p><div class="action-row">${button('Выбрать проект','/projects.html')}${button('Обсудить в VK',company.message,'light')}</div><p class="welcome__signature">BAL HOUSE <span>СТРОИТЕЛЬСТВО ЗАГОРОДНЫХ ДОМОВ</span></p></div><figure class="welcome__photo">${image(page.hero.image,{className:'welcome__image',eager:true,sizes:sizeHints.hero})}<figcaption>${anchor('BL-154 · 125 м² ↗','/projects/bl-154.html')}</figcaption></figure></div>
       <ul class="welcome__facts">${page.hero.facts.map((fact,i)=>`<li><span class="welcome__fact-number">0${i+1}</span><span>${esc(fact)}</span></li>`).join('')}</ul></section>`;
     const featured = `<div class="project-showcase" data-carousel>${cards(page.featured,'project-rail')}<div class="rail-controls" hidden><span>Листайте проекты</span><div><button type="button" data-rail-step="-1" aria-label="Предыдущий проект">←</button><output aria-live="polite" data-rail-status>1 из ${page.featured.length}</output><button type="button" data-rail-step="1" aria-label="Следующий проект">→</button></div></div></div>`;
-    const construction = `<section class="construction-banner wrap"><div class="construction-banner__photos">${image({src:'/assets/bl130-walls.webp',alt:'Дом BL-130: возведение стен на участке'})}${image({src:'/assets/bl5-walls-2.webp',alt:'Возведение стен BL-5: кладка'})}</div><div class="construction-banner__copy"><p class="eyebrow">ИЗ ПРОЕКТА — В НАСТОЯЩИЙ ДОМ</p><h2>Строительство.<br>Шаг за шагом.</h2><p>Фундамент, армирование, заливка плиты и возведение стен. Фотографии реальных этапов из сообщества Bal House.</p>${button('Смотреть наши объекты','/objects.html')}</div></section>`;
+    const construction = `<section class="construction-banner wrap"><div class="construction-banner__photos">${image({src:'/assets/bl130-walls.webp',alt:'Дом BL-130: возведение стен на участке'},{sizes:sizeHints.photo})}${image({src:'/assets/bl5-walls-2.webp',alt:'Возведение стен BL-5: кладка'},{sizes:sizeHints.photo})}</div><div class="construction-banner__copy"><p class="eyebrow">ИЗ ПРОЕКТА — В НАСТОЯЩИЙ ДОМ</p><h2>Строительство.<br>Шаг за шагом.</h2><p>Фундамент, армирование, заливка плиты и возведение стен. Фотографии реальных этапов из сообщества Bal House.</p>${button('Смотреть наши объекты','/objects.html')}</div></section>`;
     return hero +section(sectionTitle('Найдите свой дом',{label:'Весь каталог →',href:'/projects.html'},'Каменные и каркасные дома из каталога Bal House.')+featured+'<p class="fine-print">Цены приведены из каталога VK. Состав работ и актуальную стоимость уточняйте перед заключением договора.</p>',{className:'featured-section'})
       +section(sectionTitle('От фундамента до крыши',{label:'Все направления →',href:'/directions.html'},'Строительство дома целиком или отдельные этапы.')+directionCards(),{pale:true})
       +construction+section('<h2>С чего начать строительство</h2><ol class="process-list">'+page.steps.map((step,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span><h3>${esc(step.title)}</h3><p>${esc(step.body)}</p></li>`).join('')+'</ol>')
@@ -94,10 +138,10 @@ function renderer(page) {
         data-image-alt="${esc(shot.alt)}" data-image-caption="${esc(shot.caption)}"
         data-image-fit="${shot.plan ? 'contain' : 'cover'}"
         aria-label="${esc(shot.caption)} (${index + 1} из ${page.shots.length})"
-        ${index === 0 ? 'aria-current="true"' : ''}>${image(shot,{picture:false})}</a>`).join('');
+        ${index === 0 ? 'aria-current="true"' : ''}>${image(shot,{picture:false,sizes:sizeHints.thumb})}</a>`).join('');
     return `<div class="image-viewer" data-gallery>
       <figure class="image-viewer__stage">
-        ${image(first,{picture:false,eager:true})}
+        ${image(first,{picture:false,eager:true,sizes:sizeHints.stage})}
         <figcaption data-gallery-caption>${esc(first.caption)}</figcaption>
       </figure>
       ${page.shots.length > 1 ? `<div class="image-viewer__thumbnails" aria-label="Изображения проекта">${choices}</div>
@@ -117,21 +161,21 @@ function renderer(page) {
   }
 
   function service() {
-    return `<div class="wrap service-intro">${crumbs()}<div class="service-overview"><div class="service-overview__text"><p class="eyebrow">НАПРАВЛЕНИЕ BAL HOUSE</p><h1>${esc(page.heading)}</h1><p class="project-subtitle">${esc(page.subtitle)}</p>${paragraphs(page.paragraphs.slice(1),'muted')}${button('Обсудить в VK',company.message)}</div><figure class="service-overview__photo">${image(page.figure.image,{eager:true})}<figcaption>${esc(page.figure.caption)}</figcaption></figure><aside class="estimate-questions"><h2>Что нужно для расчёта</h2><p class="muted">Необязательно знать все ответы заранее. Начните с того, что уже решили.</p>${bulletList(page.questions)}</aside></div></div>`
+    return `<div class="wrap service-intro">${crumbs()}<div class="service-overview"><div class="service-overview__text"><p class="eyebrow">НАПРАВЛЕНИЕ BAL HOUSE</p><h1>${esc(page.heading)}</h1><p class="project-subtitle">${esc(page.subtitle)}</p>${paragraphs(page.paragraphs.slice(1),'muted')}${button('Обсудить в VK',company.message)}</div><figure class="service-overview__photo">${image(page.figure.image,{eager:true,sizes:sizeHints.card})}<figcaption>${esc(page.figure.caption)}</figcaption></figure><aside class="estimate-questions"><h2>Что нужно для расчёта</h2><p class="muted">Необязательно знать все ответы заранее. Начните с того, что уже решили.</p>${bulletList(page.questions)}</aside></div></div>`
       +(page.path==='directions/foundations.html'?section('<h2>Фотографии фундамента BL-130</h2><p class="muted">Посмотрите подготовку участка, армирование и заливку плиты в фотографиях Bal House.</p>'+photoGrid([['bl130-foundation.webp','Опалубка фундамента'],['bl130-rebar.webp','Армирование плиты'],['bl130-pour.webp','Заливка плиты']].map(([file,caption])=>({image:{src:'/assets/'+file,alt:caption,width:1280,height:960},caption})),'photo-grid--three')+button('Смотреть фотографии','/objects/bl130-build.html'),{pale:true}):'')
       +(page.related.length?section('<h2>Подходящие проекты</h2>'+page.catalogLinks.map(a=>anchor(a.label,a.href,'text-action')).join('')+cards(page.related,'paired-grid'),{pale:true}):'');
   }
   function objects() {
     const entries=[{path:'/objects/bl130-build.html',name:'Строительство дома BL-130',image:'bl130-foundation.webp',description:'Подготовка участка, фундамент и возведение стен.'},{path:'/objects/bl5-build.html',name:'Строительство дома BL-5',image:'bl5-walls-2.webp',description:'Возведение стен дома: фотографии с площадки.'}];
-    return pageTitle()+section(`<div class="object-list">${entries.map(o=>`<article class="object-tile">${anchor('',o.path,'object-tile__link',` aria-label="${esc(o.name)}"`).replace('</a>',image({src:'/assets/'+o.image,alt:o.name})+'</a>')}<div><p class="fine-print">Реальные фотографии · этап строительства</p><h2>${esc(o.name)}</h2><p class="muted">${esc(o.description)}</p>${button('Смотреть фотографии',o.path)}</div></article>`).join('')}</div><p class="fine-print">Больше фотографий и видео — в ${anchor('сообществе Bal House',company.vk)}.</p>`);
+    return pageTitle()+section(`<div class="object-list">${entries.map(o=>`<article class="object-tile">${anchor('',o.path,'object-tile__link',` aria-label="${esc(o.name)}"`).replace('</a>',image({src:'/assets/'+o.image,alt:o.name},{sizes:sizeHints.card})+'</a>')}<div><p class="fine-print">Реальные фотографии · этап строительства</p><h2>${esc(o.name)}</h2><p class="muted">${esc(o.description)}</p>${button('Смотреть фотографии',o.path)}</div></article>`).join('')}</div><p class="fine-print">Больше фотографий и видео — в ${anchor('сообществе Bal House',company.vk)}.</p>`);
   }
   function about() {
-    return pageTitle()+section(`<div class="company-overview"><div><h2>От идеи дома к строительству</h2>${paragraphs(page.paragraphs,'muted')}${button('Посмотреть проекты','/projects.html')}</div><figure>${image(page.photo)}<figcaption>Фото строительства BL-5 из сообщества Bal House.</figcaption></figure></div>`)
+    return pageTitle()+section(`<div class="company-overview"><div><h2>От идеи дома к строительству</h2>${paragraphs(page.paragraphs,'muted')}${button('Посмотреть проекты','/projects.html')}</div><figure>${image(page.photo,{sizes:sizeHints.card})}<figcaption>Фото строительства BL-5 из сообщества Bal House.</figcaption></figure></div>`)
       +section(`<div class="company-overview"><div><h2>Компания и контакты</h2><p class="muted">Обсудите проект с Олегом Лихонкиным. Телефон, адрес офиса и реквизиты компании собраны здесь.</p>${definitionTable(page.tables[0])}</div><div><h2>Обсудите ваш дом</h2><p>${esc(company.address)}</p>${anchor(company.phone,company.phoneHref,'phone-link')}<div class="action-row">${button('Все контакты','/contacts.html')}${anchor('Открыть сообщество Bal House',company.vk,'text-action')}</div></div></div>`,{pale:true});
   }
   function contacts() {
     return pageTitle()+section(`<div class="contact-layout"><div class="contact-facts"><section><h2>Телефон</h2>${anchor(company.phone,company.phoneHref,'contact-value')}<p class="fine-print">Контакт в сообществе — Олег Лихонкин.</p></section><section><h2>ВКонтакте</h2>${button('Написать в VK',company.message)}</section><section><h2>Офис</h2><p class="contact-value">${esc(company.address)}</p><p class="fine-print">Перед визитом уточните время встречи по телефону.</p>${anchor('Найти адрес на карте →',company.map,'text-action')}</section><section><h2>Реквизиты</h2><p>${esc(company.legalName)}<br>ИНН ${company.inn}<br>ОГРН ${company.ogrn}</p></section></div>
-      <aside class="direct-contact">${image({src:'/assets/bl154-hero.webp',alt:''})}<div><h2>Обсудим ваш дом</h2><p>Напишите, какой дом хотите построить и где находится участок. Если выбрали проект из каталога, укажите его название.</p>${button('Написать в VK',company.message)}<p class="fine-print">Откроется личная переписка с Bal House во ВКонтакте.</p></div></aside></div>`);
+      <aside class="direct-contact">${image({src:'/assets/bl154-hero.webp',alt:''},{sizes:sizeHints.full})}<div><h2>Обсудим ваш дом</h2><p>Напишите, какой дом хотите построить и где находится участок. Если выбрали проект из каталога, укажите его название.</p>${button('Написать в VK',company.message)}<p class="fine-print">Откроется личная переписка с Bal House во ВКонтакте.</p></div></aside></div>`);
   }
   function privacy() {
     return pageTitle()+section(`<div class="legal-text">${page.blocks.map(block=>block.type==='list'?`<ul>${block.items.map(item=>`<li>${rich(item)}</li>`).join('')}</ul>`:block.type==='definitions'?`<dl class="legal-definitions">${block.rows.map(([dt,dd])=>`<div><dt>${esc(dt)}</dt><dd>${esc(dd)}</dd></div>`).join('')}</dl>`:`<${block.type}>${rich(block.content)}</${block.type}>`).join('\n')}</div>`);
