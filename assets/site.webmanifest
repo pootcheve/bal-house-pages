@@ -1,0 +1,23 @@
+{
+  "name": "Bal House — строительство загородных домов",
+  "short_name": "Bal House",
+  "description": "Строительство загородных домов в Балаково и Саратовской области: каменные и каркасные дома, бани, фундаменты и кровля под ключ.",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e5e7dc",
+  "theme_color": "#1e261c",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
