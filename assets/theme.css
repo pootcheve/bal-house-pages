@@ -17,6 +17,7 @@
   --page-width: 1440px;
   --page-gutter: clamp(40px, 7vw, 112px);
   --corner: 18px;
+  --header-h: 96px;
 }
 * { box-sizing: border-box; }
 html { scrollbar-gutter: stable; scroll-padding-top: 110px; }
@@ -91,19 +92,24 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .page-footer__legal { display: flex; justify-content: space-between; gap: 24px; margin-top: 48px; padding-top: 20px; border-top: 1px solid #ffffff25; font-size: 12px; color: var(--light-text); }
 
 /* Landing: split cover, large photographs and a quiet fact strip. */
-.welcome { margin-top: 28px; }
-.welcome__layout { display: grid; grid-template-columns: .95fr 1.05fr; overflow: hidden; border-radius: 22px; background: var(--basalt); color: var(--white); }
-.welcome__content { padding: clamp(32px, 4vw, 64px); display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.welcome__location { color: var(--light-text); margin-bottom: 42px; }
-.welcome h1 { font-size: clamp(42px, 4.4vw, 68px); line-height: 1.04; letter-spacing: -.05em; margin-bottom: 28px; }
-.welcome h1 span { color: #c4ceb7; }
-.welcome__lead { color: var(--light-text); max-width: 39ch; margin-bottom: 30px; }
-.welcome__signature { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-weight: 700; letter-spacing: .09em; font-size: 13px; width: 100%; border-top: 1px solid #ffffff25; padding-top: 24px; margin: 40px 0 0; }
+.welcome { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; min-height: calc(100vh - var(--header-h)); min-height: calc(100svh - var(--header-h)); overflow: hidden; background: var(--basalt); color: var(--white); }
+.welcome__media { position: absolute; inset: 0; z-index: -2; }
+.welcome__media picture { display: block; width: 100%; height: 100%; }
+.welcome__media img { width: 100%; height: 100%; object-fit: cover; object-position: 62% center; }
+.welcome__overlay { position: absolute; inset: 0; z-index: -1; background:
+    linear-gradient(180deg, rgba(8,14,9,.5) 0%, rgba(8,14,9,.08) 24%, rgba(8,14,9,.4) 58%, rgba(6,12,7,.92) 100%),
+    linear-gradient(90deg, rgba(6,12,7,.88) 0%, rgba(6,12,7,.52) 26%, rgba(6,12,7,.14) 48%, rgba(6,12,7,0) 66%); }
+.welcome__inner { position: relative; padding-block: clamp(48px, 9vh, 110px) clamp(36px, 5vh, 64px); }
+.welcome__location { color: var(--light-text); margin-bottom: 24px; }
+.welcome h1 { font-size: clamp(40px, 4.8vw, 70px); line-height: 1.02; letter-spacing: -.045em; margin-bottom: 20px; max-width: 18ch; text-wrap: balance; }
+.welcome h1 span { display: block; margin-top: .3em; font-size: .4em; font-weight: 400; letter-spacing: -.005em; color: rgba(255,255,255,.86); }
+.welcome__lead { color: var(--light-text); max-width: 48ch; margin-bottom: 30px; font-size: clamp(16px, 1.15vw, 19px); }
+.welcome__signature { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-weight: 700; letter-spacing: .09em; font-size: 13px; max-width: 560px; margin: 34px 0 0; padding-top: 22px; border-top: 1px solid #ffffff25; }
 .welcome__signature span { font-size: 11px; letter-spacing: .08em; color: var(--light-text); }
-.welcome__photo { position: relative; min-width: 0; min-height: 550px; }
-.welcome__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 63% center; }
-.welcome__photo figcaption { position: absolute; bottom: 24px; right: 24px; }
-.welcome__photo a { display: inline-flex; align-items: center; min-height: 44px; padding: 10px 18px; background: var(--white); border-radius: 6px; color: var(--text); font-size: 14px; text-decoration: none; }
+.welcome__badge { position: absolute; top: 30px; right: var(--page-gutter); }
+.welcome__badge a { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 20px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); color: var(--white); font-size: 14px; text-decoration: none; backdrop-filter: blur(8px); }
+.welcome__badge a:hover { background: rgba(255,255,255,.26); }
+.welcome__facts-wrap { padding-block: 6px; }
 .welcome__facts { display: grid; grid-template-columns: repeat(3,1fr); list-style: none; margin: 0; padding: 28px 0; border-bottom: 1px solid var(--border); }
 .welcome__facts li { display: flex; align-items: center; gap: 20px; padding-inline: 28px; font-size: 16px; }
 .welcome__facts li:first-child { padding-left: 0; }
@@ -319,9 +325,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .nav-wide { gap: 18px; }
   .nav-wide a, .masthead__phone { font-size: 14px; }
   .action--header { font-size: 12px; padding-inline: 14px; gap: 12px; }
-  .welcome__content { padding: 36px; }
   .welcome .action { font-size: 15px; padding-inline: 16px; gap: 16px; }
-  .welcome h1 { font-size: 52px; }
 }
 @media (max-width: 1000px) {
   :root { --page-gutter: 56px; }
@@ -329,10 +333,8 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .nav-wide, .action--header { display: none; }
   .masthead__phone { margin-left: auto; }
   .nav-drawer { display: block; }
-  .welcome__content { padding: 32px; }
-  .welcome h1 { font-size: 44px; }
-  .welcome__location { margin-bottom: 30px; }
-  .welcome__lead { font-size: 16px; }
+  :root { --header-h: 80px; }
+  .welcome__location { margin-bottom: 20px; }
   .welcome .action-row { display: grid; width: 100%; }
   .welcome__signature { margin-top: 28px; padding-top: 20px; }
   .welcome__signature span { display: none; }
@@ -386,17 +388,14 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .masthead__phone { font-size: 0; }
   .masthead__phone::after { content: "Позвонить"; font-size: 14px; text-decoration: underline; }
   .nav-drawer nav { top: 72px; max-height: calc(100dvh - 72px); padding-inline: 20px; }
-  .welcome { margin-top: 16px; }
-  .welcome__layout { grid-template-columns: 1fr; border-radius: 16px; }
-  .welcome__content { padding: 30px 24px; }
-  .welcome__location { font-size: 11px; margin-bottom: 32px; }
-  .welcome h1 { font-size: clamp(36px,8vw,52px); margin-bottom: 24px; }
-  .welcome__lead { max-width: 40ch; }
-  .welcome .action-row { display: flex; }
+  :root { --header-h: 72px; }
+  .welcome__location { font-size: 11px; margin-bottom: 18px; }
+  .welcome h1 { font-size: clamp(34px, 8.6vw, 48px); margin-bottom: 18px; }
+  .welcome__lead { font-size: 16px; max-width: 42ch; }
   .welcome .action { font-size: 14px; padding: 12px 16px; gap: 20px; }
   .welcome__signature { display: none; }
-  .welcome__photo { min-height: 300px; }
-  .welcome__photo figcaption { bottom: 16px; right: 16px; }
+  .welcome__badge { top: 16px; right: 20px; }
+  .welcome__badge a { padding: 9px 16px; font-size: 13px; }
   .welcome__facts { grid-template-columns: 1fr; padding-block: 8px; }
   .welcome__facts li { min-height: 56px; padding: 14px 0; font-size: 15px; gap: 22px; }
   .welcome__facts li + li { border-left: 0; border-top: 1px solid var(--border); }
@@ -508,10 +507,8 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 }
 @media (max-width: 360px) {
   .masthead__row { gap: 12px; }
-  .welcome__content { padding-inline: 22px; }
-  .welcome h1 { font-size: 35px; }
+  .welcome h1 { font-size: 31px; }
   .welcome .action-row { display: grid; width: 100%; }
-  .welcome__photo { min-height: 260px; }
   .home-card__body { padding: 22px; }
   .project-overview .action-row { display: grid; width: 100%; }
   .project-facts dd { font-size: 19px; }
@@ -526,12 +523,17 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .wordmark { forced-color-adjust: none; background: var(--white); }
   .page-footer .wordmark { background: var(--basalt); }
   .home-card, .service-tile, .action, .image-viewer__thumbnails a { border: 1px solid CanvasText; }
-  .welcome__layout, .contact-band, .construction-banner, .direct-contact, .page-footer { background: Canvas; color: CanvasText; }
+  .welcome { background: Canvas; color: CanvasText; }
+  .welcome__overlay { display: none; }
+  .contact-band, .construction-banner, .direct-contact, .page-footer { background: Canvas; color: CanvasText; }
   .direct-contact::before { display: none; }
-  .welcome h1 span, .welcome__lead, .welcome__location, .contact-band p, .construction-banner p, .direct-contact p, .page-footer p { color: CanvasText; }
+  .welcome h1 span, .welcome__lead, .welcome__location, .welcome__signature span, .contact-band p, .construction-banner p, .direct-contact p, .page-footer p { color: CanvasText; }
 }
 @media print {
   .masthead, .nav-drawer, .contact-band, .catalog-controls, .rail-controls, .page-footer__heading { display: none; }
+  .welcome { min-height: 0; background: none; color: #000; }
+  .welcome__media, .welcome__overlay { display: none; }
+  .welcome__lead, .welcome__location, .welcome h1 span { color: #000; }
   body { color: #000; background: #fff; }
   .wrap { width: 100%; }
   .block { padding-block: 20px; }

@@ -62,20 +62,23 @@ function renderer(page) {
   const anchor = (label, href, className = '', extra = '') => `<a href="${esc(local(href))}"${className ? ` class="${className}"` : ''}${/^https?:/.test(href) ? ' target="_blank" rel="noopener noreferrer"' : ''}${extra}>${esc(label)}</a>`;
   const rich = parts => parts.map(part => typeof part === 'string' ? esc(part) : anchor(part.label, part.href)).join('');
   const paragraphs = (items = [], className = '') => items.map(parts => `<p${className ? ` class="${className}"` : ''}>${rich(parts)}</p>`).join('\n');
-  const image = (asset, {className = '', eager = false, picture = true, sizes: sizeHint = ''} = {}) => {
+  const image = (asset, {className = '', eager = false, picture = true, sizes: sizeHint = '', portrait = ''} = {}) => {
     const attrs = `src="${esc(local(asset.src))}" alt="${esc(asset.alt)}"${asset.width ? ` width="${asset.width}" height="${asset.height}"` : ''} loading="${eager ? 'eager' : 'lazy'}" decoding="async"${eager ? ' fetchpriority="high"' : ''}${className ? ` class="${className}"` : ''}`;
     const candidates = responsiveAssets.get(asset.src) || [];
-    if (candidates.length < 2) {
-      return picture && availableAvif.has(asset.src) ? `<picture><source type="image/avif" srcset="${esc(local(asset.src.replace(/\.webp$/, '.avif')))}"><img ${attrs}></picture>` : `<img ${attrs}>`;
-    }
     const sizesAttr = sizeHint ? ` sizes="${esc(sizeHint)}"` : '';
-    const webpSrcset = `srcset="${candidates.map(candidate => `${esc(local(candidate.src))} ${candidate.width}w`).join(', ')}"${sizesAttr}`;
-    const avifCandidates = candidates.filter(candidate => availableAvif.has(candidate.src));
-    const avifSource = avifCandidates.length > 1
-      ? `<source type="image/avif" srcset="${avifCandidates.map(candidate => `${esc(local(candidate.src.replace(/\.webp$/, '.avif')))} ${candidate.width}w`).join(', ')}"${sizesAttr}>`
+    const webpList = list => list.map(candidate => `${esc(local(candidate.src))} ${candidate.width}w`).join(', ');
+    const avifList = list => list.map(candidate => `${esc(local(candidate.src.replace(/\.webp$/, '.avif')))} ${candidate.width}w`).join(', ');
+    const portraitList = portrait ? (responsiveAssets.get(portrait) || []) : [];
+    const portraitSource = portraitList.length > 1
+      ? `<source media="(max-width: 700px)" type="image/avif" srcset="${avifList(portraitList)}"${sizesAttr}><source media="(max-width: 700px)" type="image/webp" srcset="${webpList(portraitList)}"${sizesAttr}>`
       : '';
-    const img = `<img ${attrs} ${webpSrcset}>`;
-    return picture ? `<picture>${avifSource}<source type="image/webp" ${webpSrcset}>${img}</picture>` : img;
+    if (candidates.length < 2) {
+      return picture && availableAvif.has(asset.src) ? `<picture>${portraitSource}<source type="image/avif" srcset="${esc(local(asset.src.replace(/\.webp$/, '.avif')))}"><img ${attrs}></picture>` : `<img ${attrs}>`;
+    }
+    const avifCandidates = candidates.filter(candidate => availableAvif.has(candidate.src));
+    const avifSource = avifCandidates.length > 1 ? `<source type="image/avif" srcset="${avifList(avifCandidates)}"${sizesAttr}>` : '';
+    const img = `<img ${attrs} srcset="${webpList(candidates)}"${sizesAttr}>`;
+    return picture ? `<picture>${portraitSource}${avifSource}<source type="image/webp" srcset="${webpList(candidates)}"${sizesAttr}>${img}</picture>` : img;
   };
   const button = (label, href, style = '') => anchor(label.replace(/^каталоге VK$/, 'Проект в VK').replace(/\s*[→↗]$/, ''), href, `action${style ? ' action--'+style : ''}`);
   const contactButtons = (message = 'Обсудить в VK', light = false) => `<div class="action-row">${button(message, company.message)}${button('Позвонить', company.phoneHref, light ? 'light' : 'outline')}</div>`;
@@ -110,8 +113,10 @@ function renderer(page) {
   const bulletList = values => `<ul class="question-list">${values.map(value=>`<li>${esc(value)}</li>`).join('')}</ul>`;
 
   function home() {
-    const hero = `<section class="welcome wrap"><div class="welcome__layout"><div class="welcome__content"><p class="welcome__location eyebrow">${esc(page.hero.location)}</p><h1>${esc(site.seo.homeHeading[0])}<br><span>${esc(site.seo.homeHeading[1])}</span></h1><p class="welcome__lead">${esc(page.hero.lead)}</p><div class="action-row">${button('Выбрать проект','/projects.html')}${button('Обсудить в VK',company.message,'light')}</div><p class="welcome__signature">BAL HOUSE <span>СТРОИТЕЛЬСТВО ЗАГОРОДНЫХ ДОМОВ</span></p></div><figure class="welcome__photo">${image(page.hero.image,{className:'welcome__image',eager:true,sizes:sizeHints.hero})}<figcaption>${anchor('BL-154 · 125 м² ↗','/projects/bl-154.html')}</figcaption></figure></div>
-      <ul class="welcome__facts">${page.hero.facts.map((fact,i)=>`<li><span class="welcome__fact-number">0${i+1}</span><span>${esc(fact)}</span></li>`).join('')}</ul></section>`;
+    const hero = `<section class="welcome"><div class="welcome__media">${image(page.hero.image,{className:'welcome__image',eager:true,sizes:'100vw',portrait:'/assets/bl154-hero-portrait.webp'})}</div><div class="welcome__overlay"></div>
+      <div class="welcome__inner wrap"><p class="welcome__location eyebrow">${esc(page.hero.location)}</p><h1>${esc(site.seo.homeHeading[0])} <span>${esc(site.seo.homeHeading[1])}</span></h1><p class="welcome__lead">${esc(page.hero.lead)}</p><div class="action-row">${button('Выбрать проект','/projects.html')}${button('Обсудить в VK',company.message,'light')}</div><p class="welcome__signature">BAL HOUSE <span>СТРОИТЕЛЬСТВО ЗАГОРОДНЫХ ДОМОВ</span></p></div>
+      <div class="welcome__badge">${anchor('BL-154 · 125 м² ↗','/projects/bl-154.html')}</div></section>
+      <div class="welcome__facts-wrap wrap"><ul class="welcome__facts">${page.hero.facts.map((fact,i)=>`<li><span class="welcome__fact-number">0${i+1}</span><span>${esc(fact)}</span></li>`).join('')}</ul></div>`;
     const featured = `<div class="project-showcase" data-carousel>${cards(page.featured,'project-rail')}<div class="rail-controls" hidden><span>Листайте проекты</span><div><button type="button" data-rail-step="-1" aria-label="Предыдущий проект">←</button><output aria-live="polite" data-rail-status>1 из ${page.featured.length}</output><button type="button" data-rail-step="1" aria-label="Следующий проект">→</button></div></div></div>`;
     const construction = `<section class="construction-banner wrap"><div class="construction-banner__photos">${image({src:'/assets/bl130-walls.webp',alt:'Дом BL-130: возведение стен на участке'},{sizes:sizeHints.photo})}${image({src:'/assets/bl5-walls-2.webp',alt:'Возведение стен BL-5: кладка'},{sizes:sizeHints.photo})}</div><div class="construction-banner__copy"><p class="eyebrow">ИЗ ПРОЕКТА — В НАСТОЯЩИЙ ДОМ</p><h2>Строительство.<br>Шаг за шагом.</h2><p>Фундамент, армирование, заливка плиты и возведение стен. Фотографии реальных этапов из сообщества Bal House.</p>${button('Смотреть наши объекты','/objects.html')}</div></section>`;
     return hero +section(sectionTitle('Найдите свой дом',{label:'Весь каталог →',href:'/projects.html'},'Каменные и каркасные дома из каталога Bal House.')+featured+'<p class="fine-print">Цены приведены из каталога VK. Состав работ и актуальную стоимость уточняйте перед заключением договора.</p>',{className:'featured-section'})
