@@ -163,13 +163,13 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .process-list li > span { display: block; color: var(--olive); font-size: 14px; margin-bottom: 34px; }
 .process-list h3 { font-size: 26px; }
 .process-list p { color: var(--subtle); margin: 0; }
-.faq-list { border-top: 1px solid var(--border); }
+.faq-list { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0 28px; align-items: stretch; border-top: 1px solid var(--border); }
 .faq-list details { border-bottom: 1px solid var(--border); }
-.faq-list summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 86px; padding: 24px 0; list-style: none; font-size: 23px; font-weight: 700; letter-spacing: -.02em; }
+.faq-list summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 78px; padding: 22px 0; list-style: none; font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
 .faq-list summary::-webkit-details-marker { display: none; }
 .faq-list summary::after { content: "+"; display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; background: var(--white); border-radius: 50%; font-size: 26px; font-weight: 400; }
 .faq-list [open] summary::after { content: "−"; }
-.faq-list details > div { padding: 0 60px 24px 0; color: var(--subtle); max-width: 90ch; }
+.faq-list details > div { padding: 0 36px 24px 0; color: var(--subtle); max-width: 90ch; }
 .faq-list details > div p:last-child { margin: 0; }
 
 /* Search, category and sort retain their existing progressive enhancement. */
@@ -334,6 +334,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .welcome .action { font-size: 15px; padding-inline: 16px; gap: 16px; }
 }
 @media (max-width: 1000px) {
+  .faq-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
   :root { --page-gutter: 56px; }
   .masthead__row { min-height: 68px; gap: 24px; }
   .nav-wide, .action--header { display: none; }
@@ -434,6 +435,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .process-list li { padding: 26px 0; }
   .process-list li > span { margin-bottom: 20px; }
   .process-list h3 { font-size: 28px; }
+  .faq-list { grid-template-columns: 1fr; }
   .faq-list summary { min-height: 84px; padding: 22px 0; font-size: 20px; gap: 20px; }
   .faq-list details > div { padding-right: 0; }
   .page-intro { padding-top: 20px; }
