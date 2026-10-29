@@ -13,7 +13,7 @@
   --subtle: #596151;
   --border: #cbd0c1;
   --light-text: #d3dac9;
-  --body-font: "PT Sans", Arial, sans-serif;
+  --body-font: "Manrope", "PT Sans", Arial, sans-serif;
   --page-width: 1440px;
   --page-gutter: clamp(40px, 7vw, 112px);
   --corner: 18px;

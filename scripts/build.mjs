@@ -6,6 +6,7 @@ import { canonicalUrl, structuredData, sitemap } from './seo.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const styleVersion = createHash('sha256').update(await readFile(path.join(root, 'assets/theme.css'))).digest('hex').slice(0, 12);
+const fontVersion = createHash('sha256').update(await readFile(path.join(root, 'assets/fonts.css'))).digest('hex').slice(0, 12);
 const moduleDir = path.join(root, 'assets/modules');
 const moduleFiles = (await readdir(moduleDir)).filter(file => file.endsWith('.js'));
 const stripVersion = source => source.replace(/\?v=[a-f0-9]+/g, '');
@@ -263,6 +264,7 @@ function renderer(page) {
   <link rel="icon" href="${local('/assets/favicon.svg')}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="${local('/assets/apple-touch-icon.png')}">
   <link rel="manifest" href="${local('/assets/site.webmanifest')}">
+  <link rel="stylesheet" href="${local('/assets/fonts.css')}?v=${fontVersion}">
   <link rel="stylesheet" href="${local('/assets/theme.css')}?v=${styleVersion}">
   <script type="module" src="${local('/assets/runtime.js')}?v=${scriptVersion}"></script>
 </head>
