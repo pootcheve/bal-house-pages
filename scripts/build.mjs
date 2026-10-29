@@ -31,17 +31,21 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp
 const availableAvif = new Set((await readdir(path.join(root, 'assets')))
   .filter(file => file.endsWith('.avif')).map(file => '/assets/' + file.replace(/\.avif$/, '.webp')));
 
-const webpWidth = async file => {
+const webpSize = async file => {
   const data = await readFile(file);
-  if (data.toString('ascii', 0, 4) !== 'RIFF' || data.toString('ascii', 8, 12) !== 'WEBP') return 0;
+  if (data.toString('ascii', 0, 4) !== 'RIFF' || data.toString('ascii', 8, 12) !== 'WEBP') return [0, 0];
   const chunk = data.toString('ascii', 12, 16);
-  if (chunk === 'VP8X') return data.readUIntLE(24, 3) + 1;
-  if (chunk === 'VP8 ') return data.readUInt16LE(26) & 0x3fff;
-  if (chunk === 'VP8L') return (data.readUInt32LE(21) & 0x3fff) + 1;
-  return 0;
+  if (chunk === 'VP8X') return [data.readUIntLE(24, 3) + 1, data.readUIntLE(27, 3) + 1];
+  if (chunk === 'VP8 ') return [data.readUInt16LE(26) & 0x3fff, data.readUInt16LE(28) & 0x3fff];
+  if (chunk === 'VP8L') {
+    const bits = data.readUInt32LE(21);
+    return [(bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1];
+  }
+  return [0, 0];
 };
 
 const assetNames = new Set(await readdir(path.join(root, 'assets')));
+const assetSizes = new Map();
 const responsiveAssets = new Map();
 for (const file of [...assetNames].filter(name => name.endsWith('.webp'))) {
   const base = file.replace(/\.webp$/, '');
@@ -49,9 +53,12 @@ for (const file of [...assetNames].filter(name => name.endsWith('.webp'))) {
   for (const suffix of ['-small', '-medium', '-large', '']) {
     const name = base + suffix + '.webp';
     if (!assetNames.has(name)) continue;
-    candidates.push({ src: '/assets/' + name, width: await webpWidth(path.join(root, 'assets', name)) });
+    const [w, h] = await webpSize(path.join(root, 'assets', name));
+    candidates.push({ src: '/assets/' + name, width: w, height: h });
   }
   if (candidates.length > 1) responsiveAssets.set('/assets/' + file, candidates);
+  const full = candidates.find(candidate => candidate.src.endsWith('/' + file));
+  if (full) assetSizes.set('/assets/' + file, [full.width, full.height]);
 }
 
 const sizeHints = {
@@ -91,6 +98,14 @@ function renderer(page) {
     const avifSource = avifCandidates.length > 1 ? `<source type="image/avif" srcset="${avifList(avifCandidates)}"${sizesAttr}>` : '';
     const img = `<img ${attrs} srcset="${webpList(candidates)}"${sizesAttr}>`;
     return picture ? `<picture>${portraitSource}${avifSource}<source type="image/webp" srcset="${webpList(candidates)}"${sizesAttr}>${img}</picture>` : img;
+  };
+  // Сцена обрезает фото по object-fit: cover, поэтому браузеру нужна версия шире,
+  // чем сам кадр — иначе он возьмёт мелкую и растянет её (фото выходит «замыленным»).
+  const stageSizes = src => {
+    const [w, h] = assetSizes.get(src) || [0, 0];
+    if (!w || !h) return sizeHints.stage;
+    const ratio = w / h;
+    return `(max-width: 700px) ${Math.round(70 * ratio)}vw, ${Math.round(36 * ratio)}vw`;
   };
   const webpSrcset = src => {
     const candidates = responsiveAssets.get(src) || [];
@@ -157,14 +172,14 @@ function renderer(page) {
     const choices = page.shots.map((shot, index) => `
       <a href="${local(shot.src)}" target="_blank" rel="noopener noreferrer"
         data-gallery-choice data-image-src="${local(shot.src)}"
-        data-image-srcset="${webpSrcset(shot.src)}" data-image-sizes="${sizeHints.stage}"
+        data-image-srcset="${webpSrcset(shot.src)}" data-image-sizes="${stageSizes(shot.src)}"
         data-image-alt="${esc(shot.alt)}" data-image-caption="${esc(shot.caption)}"
         data-image-fit="${shot.plan ? 'contain' : 'cover'}"
         aria-label="${esc(shot.caption)} (${index + 1} из ${page.shots.length})"
         ${index === 0 ? 'aria-current="true"' : ''}>${image(shot,{picture:false,sizes:sizeHints.thumb})}</a>`).join('');
     return `<div class="image-viewer" data-gallery>
       <figure class="image-viewer__stage">
-        ${image(first,{picture:false,eager:true,sizes:sizeHints.stage})}
+        ${image(first,{picture:false,eager:true,sizes:stageSizes(first.src)})}
         <figcaption data-gallery-caption>${esc(first.caption)}</figcaption>
       </figure>
       ${page.shots.length > 1 ? `<div class="image-viewer__thumbnails" aria-label="Изображения проекта">${choices}</div>

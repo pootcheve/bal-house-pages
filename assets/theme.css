@@ -217,7 +217,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .project-facts dt { font-size: 13px; color: var(--subtle); }
 .project-cost { font-size: 36px; font-weight: 700; line-height: 1.1; letter-spacing: -.04em; margin-bottom: 14px; }
 .image-viewer { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; background: var(--white); border-radius: var(--corner); }
-.image-viewer__stage { position: relative; aspect-ratio: 1.2; }
+.image-viewer__stage { position: relative; aspect-ratio: 1.45; }
 .image-viewer__stage > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .image-viewer__stage > img[data-fit="contain"] { object-fit: contain; background: var(--white); }
 .image-viewer__stage figcaption { position: absolute; top: 18px; left: 18px; max-width: calc(100% - 36px); padding: 6px 12px; border-radius: 5px; background: var(--white); color: var(--text); font-size: 12px; }
@@ -359,7 +359,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .project-facts { gap: 10px; }
   .project-facts dd { font-size: 20px; }
   .project-cost { font-size: 30px; }
-  .image-viewer__stage { aspect-ratio: .9; }
+  .image-viewer__stage { aspect-ratio: 1.45; }
   .related-grid { grid-template-columns: 1fr 1fr; }
   .service-overview { gap: 28px; }
   .service-overview__photo { min-height: 600px; }
@@ -459,7 +459,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .project-facts dt { font-size: 12px; }
   .project-cost { font-size: 32px; }
   .image-viewer { grid-column: 1; grid-row: 2; }
-  .image-viewer__stage { aspect-ratio: 1.15; }
+  .image-viewer__stage { aspect-ratio: 1.3; }
   .image-viewer__thumbnails a { flex-basis: 70px; }
   .image-viewer__thumbnails img { height: 52px; }
   .section-tabs { gap: 24px; margin-top: 16px; }
