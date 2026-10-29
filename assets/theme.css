@@ -68,11 +68,11 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .masthead__brand > span { color: var(--subtle); font-size: 11px; line-height: 1.4; border-left: 1px solid var(--border); padding-left: 16px; }
 .wordmark { display: block; width: 124px; height: 56px; }
 .wordmark img { width: 100%; height: 100%; object-fit: contain; }
-.nav-wide { display: flex; align-items: center; justify-content: center; gap: clamp(14px, 1.6vw, 26px); margin-left: auto; }
-.nav-wide a { display: flex; align-items: center; min-height: 44px; font-size: 15px; white-space: nowrap; text-decoration: none; }
+.nav-wide { display: flex; flex: 1 1 auto; align-items: center; justify-content: space-evenly; gap: clamp(12px, 1.4vw, 22px); }
+.nav-wide a { display: flex; align-items: center; min-height: 44px; font-size: 16px; font-weight: 500; white-space: nowrap; text-decoration: none; }
 .masthead [aria-current="page"] { color: var(--olive); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 10px; }
 .masthead__phone { flex-shrink: 0; white-space: nowrap; font-weight: 700; font-size: 15px; text-decoration: none; }
-.action--header { font-size: 13px; padding: 11px 16px; min-height: 44px; gap: 16px; }
+.action--header { white-space: nowrap; font-size: 13px; padding: 11px 16px; min-height: 44px; gap: 16px; }
 .nav-drawer { display: none; }
 .nav-drawer summary { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--border); border-radius: 7px; list-style: none; }
 .nav-drawer summary::-webkit-details-marker { display: none; }
@@ -333,17 +333,18 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 
 @media (max-width: 1380px) and (min-width: 1001px) {
   .masthead__brand > span { display: none; }
-  .masthead__row { gap: 22px; }
-  .nav-wide { gap: 18px; }
-  .nav-wide a, .masthead__phone { font-size: 14px; }
-  .action--header { font-size: 12px; padding-inline: 14px; gap: 12px; }
+  .masthead__row { gap: 18px; }
+  .nav-wide { gap: 12px; }
+  .nav-wide a { font-size: 15px; }
+  .masthead__phone { font-size: 14px; }
+  .action--header { white-space: nowrap; font-size: 12px; padding-inline: 14px; gap: 12px; }
   .welcome .action { font-size: 15px; padding-inline: 16px; gap: 16px; }
 }
 @media (max-width: 1000px) {
   .faq-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
   :root { --page-gutter: 56px; }
   .masthead__row { min-height: 68px; gap: 24px; }
-  .nav-wide, .action--header { display: none; }
+  .nav-wide, .action--header { white-space: nowrap; display: none; }
   .masthead__phone { margin-left: auto; }
   .nav-drawer { display: block; }
   :root { --header-h: 68px; }
@@ -385,6 +386,13 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
   .mobile-note { display: block; color: var(--subtle); font-size: 14px; }
   .comparison-table th:first-child { position: sticky; left: 0; z-index: 1; }
 }
+/* ниже ~1080px места для горизонтального меню уже не хватает — включаем бургер */
+@media (max-width: 1080px) {
+  .nav-wide, .action--header { display: none; }
+  .nav-drawer { display: block; }
+  .masthead__phone { margin-left: auto; }
+}
+
 @media (max-width: 700px) {
   :root { --page-gutter: 32px; --corner: 14px; }
   html { scroll-padding-top: 90px; }
