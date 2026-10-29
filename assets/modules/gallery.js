@@ -63,14 +63,24 @@ export function mountGallery(viewer) {
   const lightboxPrev = lightbox.querySelector('.lightbox__prev');
   const lightboxNext = lightbox.querySelector('.lightbox__next');
   let lastFocused = null;
+  if (choices.length < 2) {
+    lightboxPrev.hidden = true;
+    lightboxNext.hidden = true;
+  }
 
   function showLightbox(index) {
     const choice = choices[index];
-    if (!choice) return;
-    applyChoice(choice, index);
-    lightboxImage.src = choice.dataset.imageSrc;
-    lightboxImage.alt = choice.dataset.imageAlt;
-    lightboxCaption.textContent = choice.dataset.imageCaption;
+    if (choice) {
+      applyChoice(choice, index);
+      lightboxImage.src = choice.dataset.imageSrc;
+      lightboxImage.alt = choice.dataset.imageAlt;
+      lightboxCaption.textContent = choice.dataset.imageCaption;
+    } else {
+      // в проекте одно фото — миниатюр нет, берём снимок из самой сцены
+      lightboxImage.src = image.getAttribute('src');
+      lightboxImage.alt = image.alt;
+      lightboxCaption.textContent = caption.textContent;
+    }
     lightbox.hidden = false;
     lightbox.classList.remove('is-zoomed');
     document.documentElement.style.overflow = 'hidden';
