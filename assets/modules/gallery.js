@@ -11,6 +11,16 @@ export function mountGallery(viewer) {
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
       image.src = choice.dataset.imageSrc;
+      // srcset задаёт, какую версию покажет браузер: без его обновления
+      // смена src игнорируется и остаётся предыдущее фото
+      const nextSrcset = choice.dataset.imageSrcset;
+      if (nextSrcset) {
+        image.srcset = nextSrcset;
+        image.sizes = choice.dataset.imageSizes || image.sizes;
+      } else {
+        image.removeAttribute('srcset');
+        image.removeAttribute('sizes');
+      }
       image.alt = choice.dataset.imageAlt;
       image.dataset.fit = choice.dataset.imageFit;
       caption.textContent = choice.dataset.imageCaption;

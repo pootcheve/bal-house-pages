@@ -1,7 +1,7 @@
-import { mountNavigation } from './modules/navigation.js';
-import { mountCatalog } from './modules/catalog.js';
-import { mountGallery } from './modules/gallery.js';
-import { mountCarousel } from './modules/carousel.js';
+import { mountNavigation } from './modules/navigation.js?v=5a6d0fc46a30';
+import { mountCatalog } from './modules/catalog.js?v=5a6d0fc46a30';
+import { mountGallery } from './modules/gallery.js?v=5a6d0fc46a30';
+import { mountCarousel } from './modules/carousel.js?v=5a6d0fc46a30';
 
 // Each feature owns its own DOM and can be absent on any page.
 document.querySelectorAll('[data-navigation]').forEach(mountNavigation);

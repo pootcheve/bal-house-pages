@@ -6,6 +6,18 @@ import { canonicalUrl, structuredData, sitemap } from './seo.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const styleVersion = createHash('sha256').update(await readFile(path.join(root, 'assets/theme.css'))).digest('hex').slice(0, 12);
+const moduleDir = path.join(root, 'assets/modules');
+const moduleFiles = (await readdir(moduleDir)).filter(file => file.endsWith('.js'));
+const stripVersion = source => source.replace(/\?v=[a-f0-9]+/g, '');
+const runtimeSource = stripVersion(await readFile(path.join(root, 'assets/runtime.js'), 'utf8'));
+const scriptVersion = createHash('sha256')
+  .update(runtimeSource + (await Promise.all(moduleFiles.map(async file => stripVersion(await readFile(path.join(moduleDir, file), 'utf8'))))).join(''))
+  .digest('hex').slice(0, 12);
+// проставляем версию в импорты модулей, иначе браузер до 10 минут держит старый JS
+const runtimePath = path.join(root, 'assets/runtime.js');
+const runtimeCurrent = await readFile(runtimePath, 'utf8');
+const runtimeVersioned = runtimeCurrent.replace(/(\.\/modules\/[a-z0-9-]+\.js)(\?v=[a-f0-9]+)?(['"])/g, `$1?v=${scriptVersion}$3`);
+if (runtimeVersioned !== runtimeCurrent) await writeFile(runtimePath, runtimeVersioned);
 const site = JSON.parse(await readFile(path.join(root, 'content/site.json'), 'utf8'));
 const company = site.company;
 const projects = new Map(site.cards.map(card => [card.id, card]));
@@ -80,6 +92,11 @@ function renderer(page) {
     const img = `<img ${attrs} srcset="${webpList(candidates)}"${sizesAttr}>`;
     return picture ? `<picture>${portraitSource}${avifSource}<source type="image/webp" srcset="${webpList(candidates)}"${sizesAttr}>${img}</picture>` : img;
   };
+  const webpSrcset = src => {
+    const candidates = responsiveAssets.get(src) || [];
+    if (candidates.length < 2) return '';
+    return candidates.map(candidate => `${esc(local(candidate.src))} ${candidate.width}w`).join(', ');
+  };
   const button = (label, href, style = '') => anchor(label.replace(/^каталоге VK$/, 'Проект в VK').replace(/\s*[→↗]$/, ''), href, `action${style ? ' action--'+style : ''}`);
   const contactButtons = (message = 'Обсудить в VK', light = false) => `<div class="action-row">${button(message, company.message)}${button('Позвонить', company.phoneHref, light ? 'light' : 'outline')}</div>`;
   const nav = () => menu.map(([file,label]) => anchor(label, '/'+file, '', page.path === file ? ' aria-current="page"' : '')).join('\n');
@@ -140,6 +157,7 @@ function renderer(page) {
     const choices = page.shots.map((shot, index) => `
       <a href="${local(shot.src)}" target="_blank" rel="noopener noreferrer"
         data-gallery-choice data-image-src="${local(shot.src)}"
+        data-image-srcset="${webpSrcset(shot.src)}" data-image-sizes="${sizeHints.stage}"
         data-image-alt="${esc(shot.alt)}" data-image-caption="${esc(shot.caption)}"
         data-image-fit="${shot.plan ? 'contain' : 'cover'}"
         aria-label="${esc(shot.caption)} (${index + 1} из ${page.shots.length})"
@@ -231,7 +249,7 @@ function renderer(page) {
   <link rel="apple-touch-icon" href="${local('/assets/apple-touch-icon.png')}">
   <link rel="manifest" href="${local('/assets/site.webmanifest')}">
   <link rel="stylesheet" href="${local('/assets/theme.css')}?v=${styleVersion}">
-  <script type="module" src="${local('/assets/runtime.js')}"></script>
+  <script type="module" src="${local('/assets/runtime.js')}?v=${scriptVersion}"></script>
 </head>
 <body class="page--${esc(page.type)}">
   <a class="skip-link" href="#main">Перейти к содержанию</a>
