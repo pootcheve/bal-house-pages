@@ -105,7 +105,7 @@ function renderer(page) {
     const [w, h] = assetSizes.get(src) || [0, 0];
     if (!w || !h) return sizeHints.stage;
     const ratio = w / h;
-    return `(max-width: 700px) ${Math.round(70 * ratio)}vw, ${Math.round(36 * ratio)}vw`;
+    return `(max-width: 700px) ${Math.round(92 * Math.min(ratio, 1.6) / 1.6)}vw, ${Math.round(52 * Math.min(ratio, 1.6) / 1.6)}vw`;
   };
   const webpSrcset = src => {
     const candidates = responsiveAssets.get(src) || [];
@@ -179,7 +179,7 @@ function renderer(page) {
         ${index === 0 ? 'aria-current="true"' : ''}>${image(shot,{picture:false,sizes:sizeHints.thumb})}</a>`).join('');
     return `<div class="image-viewer" data-gallery>
       <figure class="image-viewer__stage">
-        ${image(first,{picture:false,eager:true,sizes:stageSizes(first.src)})}
+        <button class="image-viewer__open" type="button" data-gallery-open aria-label="Увеличить фотографию">${image(first,{picture:false,eager:true,sizes:stageSizes(first.src)})}</button>
         <figcaption data-gallery-caption>${esc(first.caption)}</figcaption>
       </figure>
       ${page.shots.length > 1 ? `<div class="image-viewer__thumbnails" aria-label="Изображения проекта">${choices}</div>
